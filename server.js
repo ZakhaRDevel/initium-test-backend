@@ -15,13 +15,13 @@ app.get('/users', function (req, res) {
             return;
         }
         var jsonData = JSON.parse(data);
-        res.json(jsonData);
+        res.json(jsonData.users);
     });
 });
 
 app.put('/users', function (req, res) {
     const newTaskList = req.body;
-    const jsonContent = JSON.stringify(newTaskList, null, 2);
+    const jsonContent = JSON.stringify({ users: newTaskList }, null, 2);
 
     fs.writeFile('db.json', jsonContent, 'utf8', function (err) {
         if (err) {
@@ -29,7 +29,7 @@ app.put('/users', function (req, res) {
             res.status(500).send('Ошибка записи в файл');
             return;
         }
-        res.status(200).json({message: 'Список задач успешно обновлен'});
+        res.status(200).json({ message: 'Список задач успешно обновлен' });
     });
 });
 
@@ -51,7 +51,7 @@ app.post('/users', function (req, res) {
                 res.status(500).send('Ошибка записи в файл');
                 return;
             }
-            res.status(200).json({message: 'Список успешно создан'});
+            res.status(200).json({ message: 'Список успешно создан' });
         });
     });
 });
@@ -81,12 +81,11 @@ app.delete('/users/:id', function (req, res) {
                 res.status(500).send('Ошибка записи в файл');
                 return;
             }
-            res.status(200).json({message: 'Пользователь успешно удален'});
+            res.status(200).json({ message: 'Пользователь успешно удален' });
         });
     });
 });
 
-// Используем переменную окружения для назначения порта
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
