@@ -1,8 +1,9 @@
-var express = require('express');
-var app = express();
-var fs = require('fs');
+const express = require('express');
+const fs = require('fs');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+
+const app = express();
 
 app.use(cors());
 app.use(bodyParser.json());
@@ -21,12 +22,12 @@ app.get('/users', function (req, res) {
 
     if (name) {
       users = users.filter((user) =>
-        user.name.toLowerCase().includes(name.toLowerCase())
+          user.name.toLowerCase().includes(name.toLowerCase())
       );
     }
     if (email) {
       users = users.filter((user) =>
-        user.email.toLowerCase().includes(email.toLowerCase())
+          user.email.toLowerCase().includes(email.toLowerCase())
       );
     }
     if (phone) {
@@ -49,17 +50,40 @@ app.get('/users', function (req, res) {
   });
 });
 
-app.put('/users', function (req, res) {
-  const newTaskList = req.body;
-  const jsonContent = JSON.stringify({ users: newTaskList }, null, 2);
+app.put('/users/:id', function (req, res) {
+  const userId = parseInt(req.params.id, 10);
+  const updatedUser = req.body;
 
-  fs.writeFile('db.json', jsonContent, 'utf8', function (err) {
+  fs.readFile('db.json', 'utf8', function (err, data) {
     if (err) {
-      console.error(err);
-      res.status(500).send('Ошибка записи в файл');
+      console.error('Ошибка чтения файла:', err);
+      res.status(500).send('Ошибка чтения файла');
       return;
     }
-    res.status(200).json({ message: 'Список задач успешно обновлен' });
+
+    try {
+      let taskLists = JSON.parse(data);
+      let users = taskLists.users;
+      const userIndex = users.findIndex(user => user.id === userId);
+
+      if (userIndex === -1) {
+        return res.status(404).json({ message: 'Пользователь не найден' });
+      }
+
+      // Обновляем пользователя
+      users[userIndex] = { ...users[userIndex], ...updatedUser };
+
+      fs.writeFile('db.json', JSON.stringify(taskLists, null, 2), 'utf8', function (err) {
+        if (err) {
+          console.error('Ошибка записи в файл:', err);
+          return res.status(500).send('Ошибка записи в файл');
+        }
+        res.status(200).json({ message: 'Пользователь успешно обновлен', user: users[userIndex] });
+      });
+    } catch (parseErr) {
+      console.error('Ошибка парсинга JSON:', parseErr);
+      res.status(500).send('Ошибка обработки данных');
+    }
   });
 });
 
@@ -81,7 +105,7 @@ app.post('/users', function (req, res) {
         res.status(500).send('Ошибка записи в файл');
         return;
       }
-      res.status(200).json({ message: 'Список успешно создан' });
+      res.status(200).json({ success: true });
     });
   });
 });
@@ -90,11 +114,9 @@ app.delete('/users', function (req, res) {
   const userIds = req.body.ids;
 
   if (!Array.isArray(userIds)) {
-    return res
-      .status(400)
-      .json({
-        message: 'Идентификаторы пользователей должны быть в виде массива',
-      });
+    return res.status(400).json({
+      message: 'Идентификаторы пользователей должны быть в виде массива',
+    });
   }
 
   fs.readFile('db.json', 'utf8', function (err, data) {
@@ -110,25 +132,30 @@ app.delete('/users', function (req, res) {
       console.log('Идентификаторы для удаления:', userIds);
       console.log('Список пользователей до удаления:', taskLists.users);
 
-      // Убедитесь, что тип данных user.id и элементов в userIds совпадают
+      const originalUserCount = taskLists.users.length;
+
+      // Преобразуем идентификаторы в числа для сравнения
+      const userIdsAsNumbers = userIds.map(id => parseInt(id, 10));
       taskLists.users = taskLists.users.filter(
-        (user) => !userIds.includes(user.id.toString())
+          (user) => !userIdsAsNumbers.includes(user.id)
       );
+
+      const newUserCount = taskLists.users.length;
 
       console.log('Список пользователей после удаления:', taskLists.users);
 
-      fs.writeFile(
-        'db.json',
-        JSON.stringify(taskLists, null, 2),
-        'utf8',
-        function (err) {
-          if (err) {
-            console.error('Ошибка записи в файл:', err);
-            return res.status(500).send('Ошибка записи в файл');
-          }
-          res.status(200).json({ message: 'Пользователи успешно удалены' });
+      // Проверка, были ли пользователи удалены
+      if (originalUserCount === newUserCount) {
+        console.warn('Пользователи не были удалены. Проверьте идентификаторы пользователей.');
+      }
+
+      fs.writeFile('db.json', JSON.stringify(taskLists, null, 2), 'utf8', function (err) {
+        if (err) {
+          console.error('Ошибка записи в файл:', err);
+          return res.status(500).send('Ошибка записи в файл');
         }
-      );
+        res.status(200).json({success: true});
+      });
     } catch (parseErr) {
       console.error('Ошибка парсинга JSON:', parseErr);
       res.status(500).send('Ошибка обработки данных');
