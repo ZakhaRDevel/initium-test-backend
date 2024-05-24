@@ -78,7 +78,7 @@ app.put('/users/:id', function (req, res) {
           console.error('Ошибка записи в файл:', err);
           return res.status(500).send('Ошибка записи в файл');
         }
-        res.status(200).json({ message: 'Пользователь успешно обновлен', user: users[userIndex] });
+        res.status(200).json({success: true});
       });
     } catch (parseErr) {
       console.error('Ошибка парсинга JSON:', parseErr);
